@@ -15,9 +15,9 @@
             font-size: 80px;
             font-family: Arial, sans-serif;
             overflow: hidden;
-            width: 100vw;
+            width: 100vw; 
             position: relative;
-            cursor: pointer;
+            cursor: pointer; 
         }
 
         /* --------------------------- */
@@ -75,23 +75,23 @@
         /* 图片样式 (保持不变) */
         /* --------------------------- */
         .side-image-container {
-            position: absolute;
+            position: absolute; 
             top: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
-            width: 40vw;
+            width: 40vw; 
             box-sizing: border-box;
-            z-index: 1;
+            z-index: 1; 
         }
 
         .side-image-container:first-of-type { left: 0; }
         .side-image-container:last-of-type { right: 0; }
 
         .side-image-container img {
-            max-height: 85vh;
-            max-width: 85%;
+            max-height: 85vh; 
+            max-width: 85%; 
             width: auto;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -106,18 +106,18 @@
             align-items: center;
             position: absolute;
             /* 手部位置：屏幕高度的 2/3 处 */
-            top: 67%;
+            top: 67%; 
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%); 
             
-            width: 250px;
+            width: 250px; 
             height: 9em;
-            z-index: 10;
+            z-index: 10; 
         }
 
         .hand-container > div {
             line-height: 1;
-            transition: none;
+            transition: none; 
             position: absolute;
         }
 
@@ -131,9 +131,9 @@
             color: blue;
             top: 0;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translateX(-50%); 
             opacity: 0;
-            transition: none;
+            transition: none; 
             display: none; /* 隐藏模板 */
         }
 
@@ -144,9 +144,9 @@
             color: blue;
             top: 0;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translateX(-50%); 
             opacity: 1;
-            transition: none;
+            transition: none; 
         }
 
         /* --------------------------- */
@@ -158,17 +158,17 @@
         }
 
         @keyframes parabola-throw {
-            0% {
-                transform: translate(-50%, 0) scale(1);
-                opacity: 1;
+            0% { 
+                transform: translate(-50%, 0) scale(1); 
+                opacity: 1; 
             }
             50% {
-                transform: translate(30vw, -100vh) scale(1.1);
-                opacity: 1;
+                transform: translate(30vw, -100vh) scale(1.1); 
+                opacity: 1; 
             }
-            100% {
+            100% { 
                 transform: translate(45vw, 0) scale(1);
-                opacity: 1;
+                opacity: 1; 
             }
         }
           
@@ -281,8 +281,7 @@
             const handUp = document.getElementById('hand-up');
             const dropletTemplate = document.getElementById('droplet-template');
             const handContainer = document.querySelector('.hand-container');
-            // 音频模板现在是 soundEffectTemplate
-            const soundEffectTemplate = document.getElementById('soundEffectTemplate');
+            const soundEffectTemplate = document.getElementById('soundEffectTemplate'); 
             
             const startButtonOverlay = document.getElementById('startButtonOverlay');
             const startButton = document.getElementById('startButton');
@@ -295,12 +294,29 @@
             const body = document.body;
 
             const GAME_DURATION = 30;
+            const AUDIO_POOL_SIZE = 10; // 音频池大小
             let score = 0;
             let totalHits = 0;
             let timeLeft = GAME_DURATION;
             let gameRunning = false;
-            let currentLang = langSelect.value;
+            let currentLang = langSelect.value; 
             let timerInterval;
+            
+            // 音频池状态
+            const audioPool = [];
+            let currentAudioIndex = 0; 
+            
+            // ---------------------------
+            // 关键修复：预先创建音频池
+            // ---------------------------
+            const setupAudioPool = () => {
+                for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
+                    const audioClone = soundEffectTemplate.cloneNode(true);
+                    audioPool.push(audioClone);
+                }
+                // 移除音频模板以防止误用
+                soundEffectTemplate.remove(); 
+            };
 
             // ---------------------------
             // 语言切换函数 (保持不变)
@@ -337,15 +353,18 @@
                 setTimeout(() => {
                     handUp.style.opacity = '0';
                     handDown.style.opacity = '1';
-                }, 80);
+                }, 80); 
 
-                // 2. 关键：音频并行播放
-                const audioClone = soundEffectTemplate.cloneNode(true);
-                audioClone.play().catch(error => {
-                    // 忽略播放失败，可能是首次点击时未交互授权等
-                    console.warn("Audio Playback Failed:", error);
+                // 2. 关键：从音频池中获取元素并播放
+                const audioInstance = audioPool[currentAudioIndex];
+                audioInstance.currentTime = 0; // 确保音频从头开始
+                audioInstance.play().catch(error => {
+                    // 忽略播放失败，浏览器可能仍在限制中
                 });
                 
+                // 移动到下一个音频索引 (循环使用)
+                currentAudioIndex = (currentAudioIndex + 1) % AUDIO_POOL_SIZE; 
+
                 // 3. 克隆水滴并启动动画
                 const newDroplet = dropletTemplate.cloneNode(true);
                 newDroplet.id = '';
@@ -353,7 +372,7 @@
                 
                 handContainer.appendChild(newDroplet);
                 newDroplet.offsetWidth; // 强制重绘
-                newDroplet.classList.add('falling');
+                newDroplet.classList.add('falling'); 
 
                 // 4. 动画结束后处理
                 newDroplet.addEventListener('animationend', () => {
@@ -361,7 +380,7 @@
                 });
             };
 
-            // 检查得分并清理水滴和音频
+            // 检查得分并清理水滴
             const checkHit = (dropletElement) => {
                 totalHits++;
                 score = totalHits;
@@ -376,9 +395,6 @@
 
                 // 清理 DOM：移除动画完成的水滴
                 dropletElement.remove();
-                
-                // 理论上音频播放完后也会自动停止，但频繁创建音频元素可能导致性能问题。
-                // 推荐使用 Web Audio API 或更复杂的音频池，但这里为兼容性简化。
             };
             
             // 计时器和游戏状态逻辑 (保持不变)
@@ -439,6 +455,8 @@
             // 2. 监听启动按钮开始游戏
             startButton.addEventListener('click', () => {
                 if (!gameRunning) {
+                    // 确保在用户交互后启动音频池和游戏
+                    setupAudioPool(); 
                     startGame();
                 }
             });
@@ -451,7 +469,8 @@
             });
 
             // 4. 初始化
-            updateLanguage(currentLang);
+            // 首次加载时调用 updateLanguage 来设置默认文本
+            updateLanguage(currentLang); 
         });
     </script>
 </body>
