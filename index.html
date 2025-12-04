@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💧 water</title>
+    <style>
+        /* --------------------------- */
+        /* Body 和整体布局 */
+        /* --------------------------- */
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            font-size: 80px;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            position: relative;
+            cursor: pointer;
+        }
+
+        /* --------------------------- */
+        /* 语言切换器样式 (保持不变) */
+        /* --------------------------- */
+        #language-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #language-switcher label {
+            font-size: 16px;
+            margin-right: 10px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        #langSelect {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* --------------------------- */
+        /* 计分板和状态显示 (保持不变) */
+        /* --------------------------- */
+        #game-info {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            gap: 50px;
+            font-size: 30px;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        /* --------------------------- */
+        /* 图片样式 (保持不变) */
+        /* --------------------------- */
+        .side-image-container {
+            position: absolute;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 40vw;
+            box-sizing: border-box;
+            z-index: 1;
+        }
+
+        .side-image-container:first-of-type { left: 0; }
+        .side-image-container:last-of-type { right: 0; }
+
+        .side-image-container img {
+            max-height: 85vh;
+            max-width: 85%;
+            width: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --------------------------- */
+        /* 手部和水滴样式 */
+        /* --------------------------- */
+        .hand-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: absolute;
+            /* 手部位置：屏幕高度的 2/3 处 */
+            top: 67%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            
+            width: 250px;
+            height: 9em;
+            z-index: 10;
+        }
+
+        .hand-container > div {
+            line-height: 1;
+            transition: none;
+            position: absolute;
+        }
+
+        #hand-down { top: 1em; opacity: 1; }
+        #hand-up { top: 0; opacity: 0; }
+
+        /* 原始水滴模板，默认隐藏 */
+        #droplet-template {
+            position: absolute;
+            font-size: 0.8em;
+            color: blue;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: none;
+            display: none; /* 隐藏模板 */
+        }
+
+        /* 所有动态克隆的水滴元素 */
+        .dynamic-droplet {
+            position: absolute;
+            font-size: 0.8em;
+            color: blue;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 1;
+            transition: none;
+        }
+
+        /* --------------------------- */
+        /* 抛物线动画 (保持不变) */
+        /* --------------------------- */
+        .falling {
+            /* 动画时间保持 1.5s */
+            animation: parabola-throw 1.5s cubic-bezier(0.4, 0.0, 0.6, 1.0) forwards;
+        }
+
+        @keyframes parabola-throw {
+            0% {
+                transform: translate(-50%, 0) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(30vw, -100vh) scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(45vw, 0) scale(1);
+                opacity: 1;
+            }
+        }
+          
+        /* 启动/结束覆盖层 (保持不变) */
+        #startButtonOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        #startButton {
+            padding: 20px 40px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 30px;
+            color: white;
+            outline: none;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="language-switcher">
+        <label for="langSelect">Language:</label>
+        <select id="langSelect">
+            <option value="zh">中文 (Chinese)</option>
+            <option value="ko">한국어 (Korean)</option>
+        </select>
+    </div>
+
+    <div id="game-info">
+        <span id="scoreDisplay"></span>
+        <span id="timerDisplay"></span>
+    </div>
+
+    <div class="side-image-container">
+        <img src="evan.png" alt="Evan">
+    </div>
+
+    <div id="startButtonOverlay">
+        <h1 id="overlayMessage"></h1>
+        <p id="overlayScore"></p>
+        <button id="startButton"></button>
+    </div>
+
+    <div class="hand-container">
+        <div id="hand-up">🫴</div>
+        <div id="hand-down">🫳</div>
+        <div id="droplet-template" class="dynamic-droplet">💧</div>
+    </div>
+
+    <div class="side-image-container">
+        <img src="alvin.png" alt="Alvin" id="alvinTarget">
+    </div>
+
+    <audio id="soundEffectTemplate" src="audio.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ---------------------------
+            // 语言数据对象
+            // ---------------------------
+            const texts = {
+                zh: {
+                    title: "水滴投掷挑战！",
+                    start_button: "点击开始 (30秒)",
+                    score_prefix: "分数: ",
+                    timer_prefix: "时间: ",
+                    time_unit: "秒",
+                    time_up: "时间到!",
+                    final_score: (score) => `您的最终得分是: ${score} 分`,
+                    play_again: "再玩一次"
+                },
+                ko: {
+                    title: "물방울 던지기 챌린지!",
+                    start_button: "클릭하여 시작 (30초)",
+                    score_prefix: "점수: ",
+                    timer_prefix: "시간: ",
+                    time_unit: "초",
+                    time_up: "시간 종료!",
+                    final_score: (score) => `최종 점수는 ${score}점 입니다`,
+                    play_again: "다시 플레이"
+                }
+            };
+
+            // ---------------------------
+            // DOM 元素和状态
+            // ---------------------------
+            const langSelect = document.getElementById('langSelect');
+            const handDown = document.getElementById('hand-down');
+            const handUp = document.getElementById('hand-up');
+            const dropletTemplate = document.getElementById('droplet-template');
+            const handContainer = document.querySelector('.hand-container');
+            // 音频模板现在是 soundEffectTemplate
+            const soundEffectTemplate = document.getElementById('soundEffectTemplate');
+            
+            const startButtonOverlay = document.getElementById('startButtonOverlay');
+            const startButton = document.getElementById('startButton');
+            const overlayMessage = document.getElementById('overlayMessage');
+            const overlayScore = document.getElementById('overlayScore');
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            const timerDisplay = document.getElementById('timerDisplay');
+            const gameInfo = document.getElementById('game-info');
+            const alvinTarget = document.getElementById('alvinTarget');
+            const body = document.body;
+
+            const GAME_DURATION = 30;
+            let score = 0;
+            let totalHits = 0;
+            let timeLeft = GAME_DURATION;
+            let gameRunning = false;
+            let currentLang = langSelect.value;
+            let timerInterval;
+
+            // ---------------------------
+            // 语言切换函数 (保持不变)
+            // ---------------------------
+            const updateLanguage = (lang) => {
+                const text = texts[lang];
+                
+                document.title = text.title;
+                overlayMessage.textContent = gameRunning ? text.time_up : text.title;
+                
+                if (!gameRunning && startButtonOverlay.classList.contains('hidden') === false) {
+                   overlayScore.textContent = text.final_score(score);
+                   startButton.textContent = text.play_again;
+                } else if (!gameRunning) {
+                   startButton.textContent = text.start_button;
+                }
+
+                scoreDisplay.textContent = text.score_prefix + score;
+                timerDisplay.textContent = text.timer_prefix + timeLeft + text.time_unit;
+                
+                currentLang = lang;
+            };
+
+            // ---------------------------
+            // 游戏核心逻辑：疯狂投掷
+            // ---------------------------
+
+            const throwDroplet = () => {
+                if (!gameRunning) return;
+
+                // 1. 手部快速动画
+                handDown.style.opacity = '0';
+                handUp.style.opacity = '1';
+                setTimeout(() => {
+                    handUp.style.opacity = '0';
+                    handDown.style.opacity = '1';
+                }, 80);
+
+                // 2. 关键：音频并行播放
+                const audioClone = soundEffectTemplate.cloneNode(true);
+                audioClone.play().catch(error => {
+                    // 忽略播放失败，可能是首次点击时未交互授权等
+                    console.warn("Audio Playback Failed:", error);
+                });
+                
+                // 3. 克隆水滴并启动动画
+                const newDroplet = dropletTemplate.cloneNode(true);
+                newDroplet.id = '';
+                newDroplet.style.display = 'block';
+                
+                handContainer.appendChild(newDroplet);
+                newDroplet.offsetWidth; // 强制重绘
+                newDroplet.classList.add('falling');
+
+                // 4. 动画结束后处理
+                newDroplet.addEventListener('animationend', () => {
+                    checkHit(newDroplet);
+                });
+            };
+
+            // 检查得分并清理水滴和音频
+            const checkHit = (dropletElement) => {
+                totalHits++;
+                score = totalHits;
+                scoreDisplay.textContent = texts[currentLang].score_prefix + score;
+
+                // 视觉反馈 (Alvin 闪烁)
+                alvinTarget.style.transition = '0.1s';
+                alvinTarget.style.filter = 'brightness(1.5)';
+                setTimeout(() => {
+                    alvinTarget.style.filter = 'brightness(1)';
+                }, 100);
+
+                // 清理 DOM：移除动画完成的水滴
+                dropletElement.remove();
+                
+                // 理论上音频播放完后也会自动停止，但频繁创建音频元素可能导致性能问题。
+                // 推荐使用 Web Audio API 或更复杂的音频池，但这里为兼容性简化。
+            };
+            
+            // 计时器和游戏状态逻辑 (保持不变)
+            const updateTimer = () => {
+                timeLeft--;
+                timerDisplay.textContent = texts[currentLang].timer_prefix + timeLeft + texts[currentLang].time_unit;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            };
+
+            const startGame = () => {
+                score = 0;
+                totalHits = 0;
+                timeLeft = GAME_DURATION;
+                gameRunning = true;
+                
+                // 移除所有旧水滴
+                document.querySelectorAll('.hand-container .dynamic-droplet:not(#droplet-template)').forEach(d => d.remove());
+
+                startButtonOverlay.style.opacity = '0';
+                setTimeout(() => startButtonOverlay.classList.add('hidden'), 500);
+                gameInfo.style.opacity = '1';
+
+                scoreDisplay.textContent = texts[currentLang].score_prefix + '0';
+                timerDisplay.textContent = texts[currentLang].timer_prefix + GAME_DURATION + texts[currentLang].time_unit;
+                
+                timerInterval = setInterval(updateTimer, 1000);
+            };
+
+            const endGame = () => {
+                gameRunning = false;
+                gameInfo.style.opacity = '0';
+                
+                // 移除所有飞行中的水滴
+                document.querySelectorAll('.hand-container .dynamic-droplet:not(#droplet-template)').forEach(d => d.remove());
+
+                const text = texts[currentLang];
+                overlayMessage.textContent = text.time_up;
+                overlayScore.textContent = text.final_score(score);
+                startButton.textContent = text.play_again;
+                
+                startButtonOverlay.classList.remove('hidden');
+                startButtonOverlay.style.opacity = '1';
+            };
+
+            // ---------------------------
+            // 事件监听器和初始化
+            // ---------------------------
+
+            // 1. 语言切换事件
+            langSelect.addEventListener('change', (e) => {
+                updateLanguage(e.target.value);
+            });
+
+            // 2. 监听启动按钮开始游戏
+            startButton.addEventListener('click', () => {
+                if (!gameRunning) {
+                    startGame();
+                }
+            });
+
+            // 3. 监听整个 body 点击进行投掷
+            body.addEventListener('click', (event) => {
+                if (gameRunning && event.target !== startButton && event.target.closest('#language-switcher') === null) {
+                    throwDroplet();
+                }
+            });
+
+            // 4. 初始化
+            updateLanguage(currentLang);
+        });
+    </script>
+</body>
+</html>
